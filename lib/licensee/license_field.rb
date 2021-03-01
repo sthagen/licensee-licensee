@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Licensee
   class LicenseField < Struct.new(:name, :description)
     class << self
@@ -39,17 +41,22 @@ module Licensee
       # Given a license body, returns an array of included LicneseFields
       def from_content(content)
         return [] unless content
+
         LicenseField.from_array content.scan(FIELD_REGEX).flatten
       end
     end
 
     alias key name
-    FIELD_REGEX = /\[(#{Regexp.union(LicenseField.keys)})\]/
+    FIELD_REGEX = /\[(#{Regexp.union(LicenseField.keys)})\]/.freeze
 
     # The human-readable field name
     def label
       key.sub('fullname', 'full name').capitalize
     end
     alias to_s label
+
+    def raw_text
+      "[#{key}]"
+    end
   end
 end

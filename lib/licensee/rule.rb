@@ -1,6 +1,11 @@
+# frozen_string_literal: true
+
 module Licensee
   class Rule
     attr_reader :tag, :label, :description, :group
+
+    include Licensee::HashHelper
+    HASH_METHODS = %i[tag label description].freeze
 
     def initialize(tag: nil, label: nil, description: nil, group: nil)
       @tag = tag

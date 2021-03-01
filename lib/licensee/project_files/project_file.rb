@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # A project file is a file within a project that contains license information
 # Currently extended by LicenseFile, PackageManagerFile, and ReadmeFile
 #
@@ -9,6 +11,12 @@ module Licensee
       def_delegator :@data, :[]
 
       attr_reader :content
+
+      include Licensee::HashHelper
+      HASH_METHODS = %i[
+        filename content content_hash content_normalized matcher matched_license
+        attribution
+      ].freeze
 
       ENCODING = Encoding::UTF_8
       ENCODING_OPTIONS = {
@@ -27,19 +35,32 @@ module Licensee
       #
       # Returns a new Licensee::ProjectFile
       def initialize(content, metadata = {})
-        @content = content
+        @content = content.dup
         @content.force_encoding(ENCODING)
-        unless @content.valid_encoding?
-          @content.encode!(ENCODING, ENCODING_OPTIONS)
-        end
+        @content.encode!(ENCODING, **ENCODING_OPTIONS) unless @content.valid_encoding?
+        @content.encode!(ENCODING, universal_newline: true)
 
         metadata = { name: metadata } if metadata.is_a? String
         @data = metadata || {}
       end
 
+      # TODO: In the next major release, filename should be the basename
+      # and path should be either the absolute path or the relative path to
+      # the project root, but maintaining the alias for backward compatability
       def filename
         @data[:name]
       end
+      alias path filename
+
+      def directory
+        @data[:dir] || '.'
+      end
+      alias dir directory
+
+      def path_relative_to_root
+        File.join(directory, filename)
+      end
+      alias relative_path path_relative_to_root
 
       def possible_matchers
         raise 'Not implemented'
@@ -51,22 +72,38 @@ module Licensee
 
       # Returns the percent confident with the match
       def confidence
-        matcher && matcher.confidence
+        matcher&.confidence
       end
 
       def license
-        matcher && matcher.match
+        matcher&.match
       end
 
       alias match license
-      alias path filename
+
+      def matched_license
+        license&.spdx_id
+      end
 
       # Is this file a COPYRIGHT file with only a copyright statement?
       # If so, it can be excluded from determining if a project has >1 license
       def copyright?
         return false unless is_a?(LicenseFile)
         return false unless matcher.is_a?(Matchers::Copyright)
-        filename =~ /\Acopyright(?:#{LicenseFile::NONSPDX_EXT_REGEX})?\z/i
+
+        filename =~ /\Acopyright(?:#{LicenseFile::OTHER_EXT_REGEX})?\z/io
+      end
+
+      def content_hash
+        nil
+      end
+
+      def content_normalized
+        nil
+      end
+
+      def attribution
+        nil
       end
     end
   end

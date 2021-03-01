@@ -3,6 +3,8 @@ Gemfile.lock
 /tmp
 /spec/examples.txt
 /coverage
+.env
+.ruby-version
 
 vendor/html5shiv
 vendor/jquery
@@ -14,13 +16,4 @@ vendor/eventEmitter
 vendor/eventie
 vendor/imagesloaded
 vendor/ev-emitter
-vendor/choosealicense.com/_sass
-vendor/choosealicense.com/_includes
-vendor/choosealicense.com/_layouts
-vendor/choosealicense.com/assets
-vendor/choosealicense.com/script
-vendor/choosealicense.com/*.*
-vendor/choosealicense.com/CNAME
-vendor/choosealicense.com/Gemfile
-vendor/choosealicense.com/Rakefile
-vendor/choosealicense.com/spec
+coverage

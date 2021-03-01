@@ -1,11 +1,13 @@
+# frozen_string_literal: true
+
 require_relative 'licensee/version'
 require 'forwardable'
 require 'pathname'
-require 'rugged'
 require 'yaml'
 
 module Licensee
   autoload :ContentHelper, 'licensee/content_helper'
+  autoload :HashHelper, 'licensee/hash_helper'
   autoload :License, 'licensee/license'
   autoload :LicenseField, 'licensee/license_field'
   autoload :LicenseMeta, 'licensee/license_meta'
@@ -19,7 +21,7 @@ module Licensee
   CONFIDENCE_THRESHOLD = 98
 
   # Base domain from which to build license URLs
-  DOMAIN = 'http://choosealicense.com'.freeze
+  DOMAIN = 'http://choosealicense.com'
 
   class << self
     attr_writer :confidence_threshold
@@ -35,9 +37,13 @@ module Licensee
     end
 
     def project(path, **args)
-      Licensee::Projects::GitProject.new(path, args)
+      if %r{\Ahttps://github.com}.match?(path)
+        Licensee::Projects::GitHubProject.new(path, **args)
+      else
+        Licensee::Projects::GitProject.new(path, **args)
+      end
     rescue Licensee::Projects::GitProject::InvalidRepository
-      Licensee::Projects::FSProject.new(path, args)
+      Licensee::Projects::FSProject.new(path, **args)
     end
 
     def confidence_threshold
@@ -45,9 +51,10 @@ module Licensee
     end
 
     # Inverse of the confidence threshold, represented as a float
-    # By default this will be 0.05
+    # By default this will be 0.02
     def inverse_confidence_threshold
-      @inverse ||= (1 - Licensee.confidence_threshold / 100.0).round(2)
+      @inverse_confidence_threshold ||=
+        (1 - Licensee.confidence_threshold / 100.0).round(2)
     end
   end
 end

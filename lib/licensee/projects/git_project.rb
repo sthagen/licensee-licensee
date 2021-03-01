@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Git-based project
 #
 # Analyze a given (bare) Git repository for license information
@@ -5,38 +7,49 @@
 # Project files for this project type will contain the following keys:
 #  :name - the file's path relative to the repo root
 #  :oid  - the file's OID
+
+autoload :Rugged, 'rugged'
+
 module Licensee
   module Projects
     class GitProject < Licensee::Projects::Project
-      attr_reader :repository, :revision
+      attr_reader :revision
 
       class InvalidRepository < ArgumentError; end
 
       def initialize(repo, revision: nil, **args)
-        @repository = if repo.is_a? Rugged::Repository
-          repo
-        else
-          Rugged::Repository.new(repo)
-        end
-
+        @raw_repo = repo
         @revision = revision
+
+        raise InvalidRepository if repository.head_unborn?
+
         super(**args)
+      end
+
+      def repository
+        @repository ||= begin
+          if @raw_repo.is_a? Rugged::Repository
+            @raw_repo
+          else
+            Rugged::Repository.new(@raw_repo)
+          end
+        end
       rescue Rugged::OSError, Rugged::RepositoryError
         raise InvalidRepository
       end
 
       def close
-        @repository.close
+        repository.close
       end
 
       private
 
       def commit
         @commit ||= if revision
-          repository.lookup(revision)
-        else
-          repository.last_commit
-        end
+                      repository.lookup(revision)
+                    else
+                      repository.last_commit
+                    end
       end
 
       MAX_LICENSE_SIZE = 64 * 1024
@@ -56,9 +69,12 @@ module Licensee
       #  :name - the file's path relative to the repo root
       #  :oid  - the file's OID
       def files
-        @files ||= commit.tree.map do |entry|
-          next unless entry[:type] == :blob
-          { name: entry[:name], oid: entry[:oid] }
+        @files ||= files_from_tree(commit.tree)
+      end
+
+      def files_from_tree(tree, dir = '.')
+        tree.select { |e| e[:type] == :blob }.map do |entry|
+          entry.merge(dir: dir)
         end.compact
       end
     end

@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 RSpec.describe Licensee::Matchers::Copyright do
-  let(:content) { 'Copyright 2015 Ben Balter' }
+  subject { described_class.new(file) }
+
+  let(:content) { 'Copyright 2015 Ben Balter'.dup }
   let(:file) { Licensee::ProjectFiles::LicenseFile.new(content, 'LICENSE.txt') }
   let(:mit) { Licensee::License.find('mit') }
   let(:no_license) { Licensee::License.find('no-license') }
-
-  subject { described_class.new(file) }
 
   it 'stores the file' do
     expect(subject.file).to eql(file)
@@ -15,7 +17,7 @@ RSpec.describe Licensee::Matchers::Copyright do
   end
 
   it 'has a confidence' do
-    expect(subject.confidence).to eql(100)
+    expect(subject.confidence).to be(100)
   end
 
   {
@@ -26,8 +28,9 @@ RSpec.describe Licensee::Matchers::Copyright do
     'Comma-separated date'  => 'Copyright (c) 2003, 2004 Ben Balter',
     'Hyphen-separated date' => 'Copyright (c) 2003-2004 Ben Balter',
     'ASCII-8BIT encoded'    => "Copyright \xC2\xA92015 Ben Balter`",
-    'No year'               => 'Copyright Ben Balter'
-      .force_encoding('ASCII-8BIT')
+    'No year'               => 'Copyright Ben Balter',
+    'Multiline'             => "Copyright Ben Balter\nCopyright Another Entity"
+      .dup.force_encoding('ASCII-8BIT')
   }.each do |description, notice|
     context "with a #{description} notice" do
       let(:content) { notice }

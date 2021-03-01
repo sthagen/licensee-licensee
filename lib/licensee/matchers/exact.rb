@@ -1,16 +1,13 @@
+# frozen_string_literal: true
+
 module Licensee
   module Matchers
-    class Exact
-      attr_reader :file
-
-      def initialize(file)
-        @file = file
-      end
-
+    class Exact < Licensee::Matchers::Matcher
       def match
         return @match if defined? @match
-        @match = Licensee.licenses(hidden: true).find do |license|
-          license.length == @file.length && license.wordset == @file.wordset
+
+        @match = potential_matches.find do |potential_match|
+          potential_match.wordset == file.wordset
         end
       end
 

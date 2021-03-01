@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Licensee
   class LicenseMeta < Struct.new(
     :title, :spdx_id, :source, :description, :how, :conditions, :permissions,
@@ -12,6 +14,9 @@ module Licensee
 
     PREDICATE_FIELDS = %i[featured hidden].freeze
 
+    include Licensee::HashHelper
+    HASH_METHODS = members - %i[conditions permissions limitations spdx_id]
+
     class << self
       # Create a new LicenseMeta from YAML
       #
@@ -20,6 +25,7 @@ module Licensee
       # returns a LicenseMeta with defaults set
       def from_yaml(yaml)
         return from_hash({}) if yaml.nil? || yaml.to_s.empty?
+
         from_hash YAML.safe_load(yaml)
       end
 
@@ -49,6 +55,10 @@ module Licensee
     def [](key)
       key = 'spdx_id' if key == 'spdx-id'
       super(key)
+    end
+
+    def source
+      "https://spdx.org/licenses/#{spdx_id}.html" if spdx_id
     end
   end
 end

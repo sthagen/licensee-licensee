@@ -1,12 +1,16 @@
+# frozen_string_literal: true
+
 RSpec.describe Licensee::Matchers::Dice do
+  subject { described_class.new(file) }
+
   let(:mit) { Licensee::License.find('mit') }
   let(:gpl) { Licensee::License.find('gpl-3.0') }
   let(:agpl) { Licensee::License.find('agpl-3.0') }
+  let(:lgpl) { Licensee::License.find('lgpl-2.1') }
   let(:cc_by) { Licensee::License.find('cc-by-4.0') }
   let(:cc_by_sa) { Licensee::License.find('cc-by-sa-4.0') }
   let(:content) { sub_copyright_info(gpl) }
   let(:file) { Licensee::ProjectFiles::LicenseFile.new(content, 'LICENSE.txt') }
-  subject { described_class.new(file) }
 
   it 'stores the file' do
     expect(subject.file).to eql(file)
@@ -16,44 +20,36 @@ RSpec.describe Licensee::Matchers::Dice do
     expect(subject.match).to eql(gpl)
   end
 
-  it 'builds a list of potential licenses' do
-    expect(subject.potential_licenses).to eql([agpl, gpl])
-  end
-
   it 'sorts licenses by similarity' do
-    expect(subject.licenses_by_similiarity[0]).to eql([gpl, 100.0])
-    expect(subject.licenses_by_similiarity[1]).to eql([agpl, 95.73361082206036])
-  end
-
-  it 'returns a list of licenses above the confidence threshold' do
-    expect(subject.licenses_by_similiarity[0]).to eql([gpl, 100.0])
-    expect(subject.licenses_by_similiarity[1]).to eql([agpl, 95.73361082206036])
+    expect(subject.matches_by_similarity[0]).to eql([gpl, 100.0])
+    expect(subject.matches_by_similarity[1]).to eql([agpl, 94.56967213114754])
+    expect(subject.matches_by_similarity[2]).to eql([lgpl, 26.821370750134918])
   end
 
   it 'returns the match confidence' do
-    expect(subject.confidence).to eql(100.0)
+    expect(subject.confidence).to be(100.0)
   end
 
   context 'without a match' do
     let(:content) { 'Not really a license' }
 
     it "doesn't match" do
-      expect(subject.match).to eql(nil)
+      expect(subject.match).to be(nil)
       expect(subject.matches).to be_empty
-      expect(subject.confidence).to eql(0)
+      expect(subject.confidence).to be(0)
     end
   end
 
   context 'stacked licenses' do
     let(:content) do
-      sub_copyright_info(mit) + "\n\n" + sub_copyright_info(gpl)
+      "#{sub_copyright_info(mit)}\n\n#{sub_copyright_info(gpl)}"
     end
 
     it "doesn't match" do
-      expect(content).to_not be_detected_as(gpl)
-      expect(subject.match).to eql(nil)
+      expect(content).not_to be_detected_as(gpl)
+      expect(subject.match).to be(nil)
       expect(subject.matches).to be_empty
-      expect(subject.confidence).to eql(0)
+      expect(subject.confidence).to be(0)
     end
   end
 
@@ -72,11 +68,11 @@ RSpec.describe Licensee::Matchers::Dice do
       let(:content) { File.read(license_path) }
 
       it "doesn't match" do
-        expect(content).to_not be_detected_as(cc_by)
-        expect(content).to_not be_detected_as(cc_by_sa)
+        expect(content).not_to be_detected_as(cc_by)
+        expect(content).not_to be_detected_as(cc_by_sa)
         expect(subject.match).to be_nil
         expect(subject.matches).to be_empty
-        expect(subject.confidence).to eql(0)
+        expect(subject.confidence).to be(0)
       end
     end
   end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Licensee
   module Matchers
     class Dice < Licensee::Matchers::Matcher
@@ -5,10 +7,10 @@ module Licensee
       # than the confidence threshold
       def match
         @match ||= if matches.empty?
-          nil
-        else
-          matches.first[0]
-        end
+                     nil
+                   else
+                     matches.first[0]
+                   end
       end
 
       # Licenses that may be a match for this file.
@@ -18,36 +20,44 @@ module Licensee
       #    that begin with the title of a non-open source CC license variant
       # 2. The percentage change in file length may not exceed the inverse
       #    of the confidence threshold
-      def potential_licenses
-        @potential_licenses ||= begin
-          Licensee.licenses(hidden: true).select do |license|
+      def potential_matches
+        @potential_matches ||= begin
+          super.select do |license|
             if license.creative_commons? && file.potential_false_positive?
               false
             else
-              license.wordset && license.length_delta(file) <= license.max_delta
+              license.wordset
             end
           end
         end
       end
+      alias potential_licenses potential_matches
 
-      def licenses_by_similiarity
-        @licenses_by_similiarity ||= begin
-          licenses = potential_licenses.map do |license|
-            [license, license.similarity(file)]
+      def matches_by_similarity
+        @matches_by_similarity ||= begin
+          matches = potential_matches.map do |potential_match|
+            [potential_match, potential_match.similarity(file)]
           end
-          licenses.sort_by { |_, similarity| similarity }.reverse
+          matches.sort_by { |_, similarity| similarity }.reverse
         end
       end
+      alias licenses_by_similarity matches_by_similarity
 
       def matches
-        @matches ||= licenses_by_similiarity.select do |_, similarity|
-          similarity >= Licensee.confidence_threshold
+        @matches ||= matches_by_similarity.select do |_, similarity|
+          similarity >= minimum_confidence
         end
       end
 
       # Confidence that the matched license is a match
       def confidence
-        @confidence ||= match ? file.similarity(match) : 0
+        @confidence ||= match ? match.similarity(file) : 0
+      end
+
+      private
+
+      def minimum_confidence
+        Licensee.confidence_threshold
       end
     end
   end
